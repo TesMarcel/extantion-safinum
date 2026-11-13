@@ -1,13 +1,13 @@
 # Extension Safinum — SAFINUM Innovate Challenge 2026
 
-Extension de navigateur qui rend les services financiers numériques compréhensibles dans les langues nationales du Cameroun (**fulfulde** et **beti-fang**), sans modifier le code source du service ciblé.
+Extension de navigateur qui rend les services financiers numériques compréhensibles dans les langues nationales du Cameroun (**pidgin**, **fulfulde** et **ewondo**), sans modifier le code source du service ciblé.
 
 ## Contenu du dépôt
 
 | Fichier / dossier | Description |
 |---|---|
 | `PRESELECTION EPREUVE SAFINUM INNOVATE CHALLENGE Fr.pdf` | Énoncé officiel de l'épreuve de présélection |
-| `liste_mots_a_traduire.csv` | Tous les textes de l'environnement de test, en FR / EN / fulfulde / beti-fang, avec niveau de fiabilité |
+| `liste_mots_a_traduire.csv` | Tous les textes de l'environnement de test, en FR / EN / pidgin / fulfulde / ewondo, avec niveau de fiabilité |
 | `extantion/` | Captures d'écran des 5 étapes de l'environnement de test |
 | `logo safinum.png`, `logo safinum blanc.png` | Logos de l'événement |
 
@@ -67,4 +67,6 @@ Qualité linguistique vérifiée à part. Défauts majeurs : contresens sur une 
 
 ## Traductions
 
-Les traductions fulfulde et beti-fang de `liste_mots_a_traduire.csv` sont des **brouillons** (fiabilité H / M / B indiquée par ligne). Elles doivent être validées par des locuteurs natifs avant la démonstration, en priorité les alertes de sécurité (A02–A09) et le bouton « Confirmer le transfert » (R11).
+Les traductions pidgin, fulfulde et ewondo de `liste_mots_a_traduire.csv` sont des **brouillons** (fiabilité H / M / B indiquée par ligne). Elles doivent être validées par des locuteurs natifs avant la démonstration, en priorité les alertes de sécurité (A02–A09) et le bouton « Confirmer le transfert » (R11).
+
+Langues prévues ensuite (une colonne à ajouter au CSV, remplie par un locuteur natif) : bamiléké, basaa, duala, bafia, kanuri, arabe choa, maka, bekwil, masa, toupouri, mafa.
