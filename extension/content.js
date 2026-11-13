@@ -408,8 +408,14 @@
     loadVoices();
     TTS.addEventListener("voiceschanged", loadVoices);
   }
-  const pickVoice = (want) =>
-    localVoices.find((v) => v.lang.toLowerCase().replace("_", "-").startsWith(want)) || null;
+  // Région préférée par langue, puis voix de base (sans variante « +Adam » d'espeak).
+  const PREFERRED = { fr: "fr-fr", en: "en-gb" };
+  function pickVoice(want) {
+    const ok = localVoices.filter((v) => v.lang.toLowerCase().replace("_", "-").startsWith(want));
+    const score = (v) =>
+      (v.lang.toLowerCase().replace("_", "-") === PREFERRED[want] ? 2 : 0) + (v.name.includes("+") ? 0 : 1);
+    return ok.sort((a, b) => score(b) - score(a))[0] || null;
+  }
 
   const READABLE = "button,a,label,li,tr,p,h1,h2,h3,h4,h5,h6,[role=alert],[role=status],[role=button]";
   let voiceTarget = null;

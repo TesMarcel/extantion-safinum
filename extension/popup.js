@@ -58,7 +58,12 @@ function showVoiceInfo(code) {
   const total = new Set(Object.values(globalThis.SAFINUM_DICT.entries).filter((e) => e[code]).map((e) => e.id)).size;
   const render = () => {
     const want = lang?.ttsLang || "fr";
-    const v = speechSynthesis.getVoices().find((x) => x.localService && x.lang.toLowerCase().startsWith(want));
+    const pref = { fr: "fr-fr", en: "en-gb" }[want];
+    const score = (x) => (x.lang.toLowerCase().replace("_", "-") === pref ? 2 : 0) + (x.name.includes("+") ? 0 : 1);
+    const v = speechSynthesis
+      .getVoices()
+      .filter((x) => x.localService && x.lang.toLowerCase().startsWith(want))
+      .sort((a, b) => score(b) - score(a))[0];
     $("voiceinfo").textContent =
       `${n} / ${total} mots enregistrés en ${lang?.label}. ` +
       (v ? `Les autres sont lus par la voix « ${v.name} » (approximative).` : "Aucune voix locale de secours sur cet ordinateur.");
