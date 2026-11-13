@@ -125,6 +125,10 @@ V30;glossaire;réessayer;try again;try again;H;fuɗɗito;M;bulan bo fe;B;
 V31;glossaire;code PIN / mot de passe;PIN / password;PIN / password;H;PIN / konngol suturo;B;PIN;B;
 V32;glossaire;ne communiquez jamais;never share;no give am to nobody;M;taa hokku hay gooto;M;A VALIDER;B;probable dans un message inédit (arnaques)
 V33;glossaire;client(s);customer(s);customer;H;soodoowo / soodooɓe;M;kliyan;B;
+# --- EXTENSION : MESSAGES INEDITS NON TRADUITS (affichés par l'extension) ---;;;;;;;;;;
+U01;extension;Non traduit — mots clés expliqués :;Not translated — key words explained:;No translate yet — big word dem explain fo bracket:;B;Ɓe firaay ɗum tawon — konnguɗi mawɗi ɗi firaama:;B;Ba ngé ki kobola — mbembe bifia bi nga kobola:;B;préfixe ajouté devant un message inédit ; « : » final conservé
+U02;extension;Attention : message de sécurité non traduit. Demandez de l'aide avant de continuer.;Warning: security message not translated. Ask for help before you continue.;Tek kia: security message weh dem neva translate. Ask pesin fo help before yu continue.;M;Reentino: habaru kisal ɓe firaay. Naamno ballal hade a jokka.;B;Yen mbembe: kalara mvoé ba ngé ki kobola. Sili mod a vole wo ôsusua ô ne kele ôsu.;B;CRITIQUE : affiché devant un message inédit qui parle de code, mot de passe, fraude, compte bloqué…
+
 # --- NE JAMAIS TRADUIRE (à protéger dans l'extension) ---;;;;;;;;;;
 X01;protege;Safinum Pay;Safinum Pay;NE PAS TRADUIRE;;NE PAS TRADUIRE;;NE PAS TRADUIRE;;nom de marque
 X02;protege;Amina Ngo Bell / Amina / AN;Amina Ngo Bell / Amina / AN;NE PAS TRADUIRE;;NE PAS TRADUIRE;;NE PAS TRADUIRE;;nom de l'utilisateur

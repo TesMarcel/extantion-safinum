@@ -10,7 +10,7 @@ Extension de navigateur qui rend les services financiers numériques compréhens
 | `liste_mots_a_traduire.csv` | Tous les textes de l'environnement de test, en FR / EN / pidgin / fulfulde / ewondo, avec niveau de fiabilité |
 | `extension/` | Extension Chrome « Safinum Lingua » (Manifest V3) : dictionnaire généré depuis le CSV, protection des valeurs financières, lecture vocale, traduction IA facultative des messages inédits |
 | `enregistrements_a_verifier/` | Enregistrements de locuteurs natifs trouvés sur Lingua Libre / Wikimedia Commons, nommés d'après le mot correspondant ; `index.csv` donne sens, lignes concernées, locuteur, licence et source |
-| `extantion/` | Captures d'écran des 5 étapes de l'environnement de test |
+| `capture/` | Captures d'écran des 5 étapes de l'environnement de test |
 | `logo safinum.png`, `logo safinum blanc.png` | Logos de l'événement |
 
 ## L'épreuve en bref
@@ -90,7 +90,7 @@ Seules les voix **locales** de l'ordinateur sont utilisées : les voix « en lig
 
 **Sous macOS**, les voix (Thomas, Daniel…) sont installées d'office ; d'autres s'ajoutent dans **Réglages Système** → **Accessibilité** → **Contenu énoncé** → **Voix du système**.
 
-**Sous Linux**, il faut un moteur de voix et une option de Chrome, sinon seuls les enregistrements sont lus (message « Aucune voix locale ») :
+**Sous Linux**, il faut un moteur de voix et, pour Chrome, Edge et Brave, une option de lancement, sinon seuls les enregistrements sont lus (message « Aucune voix locale ») :
 
 ```bash
 sudo pacman -S espeak-ng speech-dispatcher        # Arch ; Debian/Ubuntu : sudo apt install espeak-ng speech-dispatcher
@@ -103,10 +103,21 @@ Puis fermer complètement Chrome et le relancer.
 
 Enregistrements actuels : fulfulde S02 (Sannu), F12 (Meere) ; ewondo F12 (Zezé) — crédits dans `extension/audio/CREDITS.md`. Pour en ajouter : fenêtre de l'extension → **🎙 Enregistrer les mots** (page pour locuteurs natifs, tout reste local), placer les fichiers `<id>.webm` dans `extension/audio/<langue>/`, relancer le générateur.
 
-## Installer l'extension (Chrome)
+## Installer l'extension
 
-1. `chrome://extensions` → activer le **Mode développeur**.
-2. **Charger l'extension non empaquetée** → choisir le dossier `extension/`.
-3. Ouvrir https://safinum.cm/hackathon-test : le sélecteur 🌍 apparaît en bas à gauche.
+Le même dossier `extension/` fonctionne dans tous les navigateurs ci-dessous. Chacun a été testé sur le parcours complet de https://safinum.cm/hackathon-test (traduction, alerte de sécurité, message inédit, changement de langue, voix) avec un journal d'intégrité du jury **INTACT** aux 5 étapes.
+
+| Navigateur | Version testée | Installation |
+|---|---|---|
+| Google Chrome | 157 | `chrome://extensions` → **Mode développeur** → **Charger l'extension non empaquetée** → dossier `extension/` |
+| Microsoft Edge | 157 | `edge://extensions` → **Mode développeur** → **Charger l'extension décompressée** → dossier `extension/` |
+| Brave | 1.99 | `brave://extensions` → **Mode développeur** → **Charger l'extension non empaquetée** → dossier `extension/` |
+| Opera | 140 | `opera://extensions` → **Mode développeur** → **Charger l'extension non empaquetée** → dossier `extension/` |
+| Mozilla Firefox | 160 | `about:debugging#/runtime/this-firefox` → **Charger un module complémentaire temporaire** → fichier `extension/manifest.json` (retiré à la fermeture de Firefox) |
+
+Puis ouvrir https://safinum.cm/hackathon-test : le sélecteur 🌍 apparaît en bas à gauche.
+
+- **Voix :** Firefox utilise directement les voix du système, sans option. Opera sous Linux n'a pas de synthèse vocale : seuls les enregistrements de locuteurs natifs y sont lus.
+- **Téléphone :** Chrome pour Android n'accepte pas les extensions. Firefox pour Android les accepte, mais l'extension n'y a pas été testée.
 
 Après une modification du CSV : `python3 extension/tools/build_dictionary.py`, puis recharger l'extension. Chaque colonne de langue du CSV devient une langue de l'extension.

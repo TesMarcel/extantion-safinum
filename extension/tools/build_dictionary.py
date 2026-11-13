@@ -57,6 +57,7 @@ def main() -> int:
 
     entries: dict[str, dict] = {}
     glossary: list[dict] = []
+    ui: dict[str, dict] = {}  # textes propres à l'extension (U…)
     items: list[dict] = []  # pour l'outil d'enregistrement
     conflicts = 0
     for r in rows[1:]:
@@ -64,6 +65,10 @@ def main() -> int:
         if rid.startswith(("X", "D")):  # protégés / dates : jamais traduits
             continue
         tr = {c: r[col[c]] for c in lang_cols if r[col[c]].strip() not in EMPTY}
+        if rid.startswith("U"):
+            ui[rid] = {"fr": r[col["francais"]], "en": r[col["anglais"]], **tr}
+            items.append({"id": rid, "fr": r[col["francais"]], **tr})
+            continue
         if rid.startswith("V"):
             glossary.append({"fr": r[col["francais"]], "en": r[col["anglais"]], **tr})
             continue
@@ -87,7 +92,7 @@ def main() -> int:
             if files:
                 audio[c] = files
 
-    payload = {"languages": languages, "entries": entries, "glossary": glossary, "audio": audio}
+    payload = {"languages": languages, "entries": entries, "glossary": glossary, "ui": ui, "audio": audio}
     OUT_PATH.write_text(
         "// Fichier généré par tools/build_dictionary.py — ne pas modifier à la main.\n"
         "globalThis.SAFINUM_DICT = "
@@ -101,7 +106,7 @@ def main() -> int:
         encoding="utf-8",
     )
     names = ", ".join(l["label"] for l in languages)
-    print(f"Langues : {names} — {len(entries)} entrées, {len(glossary)} termes de glossaire")
+    print(f"Langues : {names} — {len(entries)} entrées, {len(glossary)} termes de glossaire, {len(ui)} textes d'extension")
     for l in languages:
         print(f"  {l['label']} : {len(audio.get(l['code'], {}))} enregistrement(s)")
     return 1 if conflicts else 0

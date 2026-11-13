@@ -1,4 +1,6 @@
 const LANGUAGES = globalThis.SAFINUM_DICT.languages;
+// Firefox marque ses voix système comme non locales (voir content.js)
+const IS_FIREFOX = /\bFirefox\//.test(navigator.userAgent);
 const DEFAULTS = { lang: LANGUAGES[0].code, sites: { "safinum.cm": true }, ai: false, tooltip: true, voice: true, rate: 0.9 };
 const $ = (id) => document.getElementById(id);
 
@@ -62,7 +64,7 @@ function showVoiceInfo(code) {
     const score = (x) => (x.lang.toLowerCase().replace("_", "-") === pref ? 2 : 0) + (x.name.includes("+") ? 0 : 1);
     const v = speechSynthesis
       .getVoices()
-      .filter((x) => x.localService && x.lang.toLowerCase().startsWith(want))
+      .filter((x) => (x.localService || IS_FIREFOX) && x.lang.toLowerCase().startsWith(want))
       .sort((a, b) => score(b) - score(a))[0];
     $("voiceinfo").textContent =
       `${n} / ${total} mots enregistrés en ${lang?.label}. ` +

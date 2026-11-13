@@ -1126,6 +1126,22 @@ globalThis.SAFINUM_DICT = {
    "ewondo": "kliyan"
   }
  ],
+ "ui": {
+  "U01": {
+   "fr": "Non traduit — mots clés expliqués :",
+   "en": "Not translated — key words explained:",
+   "pidgin": "No translate yet — big word dem explain fo bracket:",
+   "fulfulde": "Ɓe firaay ɗum tawon — konnguɗi mawɗi ɗi firaama:",
+   "ewondo": "Ba ngé ki kobola — mbembe bifia bi nga kobola:"
+  },
+  "U02": {
+   "fr": "Attention : message de sécurité non traduit. Demandez de l'aide avant de continuer.",
+   "en": "Warning: security message not translated. Ask for help before you continue.",
+   "pidgin": "Tek kia: security message weh dem neva translate. Ask pesin fo help before yu continue.",
+   "fulfulde": "Reentino: habaru kisal ɓe firaay. Naamno ballal hade a jokka.",
+   "ewondo": "Yen mbembe: kalara mvoé ba ngé ki kobola. Sili mod a vole wo ôsusua ô ne kele ôsu."
+  }
+ },
  "audio": {
   "fulfulde": {
    "F12": "F12.wav",

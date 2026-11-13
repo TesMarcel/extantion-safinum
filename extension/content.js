@@ -98,21 +98,22 @@
   }
 
   // ---------- État des nœuds traduits ----------
-  // node -> { orig, applied, id, rest }
+  // node -> { orig, applied, id, rest, label }  (label : mention « Non traduit » d'un texte inédit)
   const state = new WeakMap();
   const touched = new Set();
   const titled = new Set();
 
-  function setText(node, orig, translated, id = null, rest = "") {
+  function setText(node, orig, translated, id = null, rest = "", label = null) {
     const lead = orig.match(/^\s*/)[0];
     const trail = orig.match(/\s*$/)[0];
     const applied = lead + translated.trim() + trail;
-    state.set(node, { orig, applied, id, rest });
+    state.set(node, { orig, applied, id, rest, label });
     touched.add(node);
     if (node.nodeValue !== applied) node.nodeValue = applied;
     const parent = node.parentElement;
     if (parent && parent.childNodes.length === 1) {
-      if (LANGS[settings.lang].htmlLang) parent.setAttribute("lang", LANGS[settings.lang].htmlLang);
+      // Un texte inédit annoté reste surtout en français : on ne change pas sa langue.
+      if (!label && LANGS[settings.lang].htmlLang) parent.setAttribute("lang", LANGS[settings.lang].htmlLang);
       if (settings.tooltip && !parent.hasAttribute("title")) {
         parent.setAttribute("title", orig.trim());
         parent.dataset.slTitle = "1";
@@ -139,7 +140,87 @@
 
     // Texte inconnu : nom propre -> jamais traduit
     if (PROPER_NAME.test(orig.trim())) return;
+
+    // Texte inédit (message ajouté par le service ou par le jury) : aide hors ligne
+    const unseen = orig.trim().split(/\s+/).length >= 3 ? translateUnseen(orig.trim()) : null;
+    if (unseen) setText(node, orig, unseen.text, null, "", unseen.label);
     if (settings.ai) queueAI(node, orig);
+  }
+
+  // ---------- Contenu inédit, sans IA ni réseau ----------
+  // 1) les phrases déjà connues du dictionnaire sont traduites ;
+  // 2) dans les autres, chaque terme du glossaire reçoit sa traduction entre parenthèses ;
+  // 3) le texte est précédé d'une mention honnête « Non traduit » (U01), ou d'un
+  //    avertissement (U02) s'il parle de code, mot de passe, fraude, compte bloqué…
+  const uiText = (id) => {
+    const u = DICT.ui?.[id];
+    return u ? u[settings.lang] || u.fr : "";
+  };
+  const B = "(?<![\\p{L}\\d])"; // début de mot (lettres accentuées comprises)
+  const E = "(?![\\p{L}\\d])"; // fin de mot
+  const SECURITY_HINT = new RegExp(
+    B +
+      "(fraud\\p{L}*|arnaque\\p{L}*|escroc\\p{L}*|code secret|code pin|pin|otp|mot de passe|password|" +
+      "ne (communiquez|partagez|donnez) jamais|never (share|give)|suspendu\\p{L}*|suspended|bloqu\\p{L}*|blocked|" +
+      "piratage|phishing|hack\\p{L}*|s[ée]curit[ée]|security|urgent\\p{L}*)" +
+      E,
+    "iu"
+  );
+  const escapeRe = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const glossCache = new Map(); // langue -> { re, map }
+  function glossFor(lang) {
+    if (glossCache.has(lang)) return glossCache.get(lang);
+    const map = new Map();
+    for (const g of DICT.glossary) {
+      if (!g[lang]) continue;
+      const target = g[lang].split(" / ")[0];
+      for (const src of [...g.fr.split(" / "), ...g.en.split(" / ")]) {
+        const term = norm(src.replace(/\(s\)$/, ""));
+        if (term.length > 2 && !map.has(term)) map.set(term, target);
+      }
+    }
+    const terms = [...map.keys()].sort((a, b) => b.length - a.length).map(escapeRe);
+    const re = terms.length ? new RegExp(B + "(" + terms.join("|") + ")s?" + E, "giu") : null;
+    const g = { re, map };
+    glossCache.set(lang, g);
+    return g;
+  }
+  function gloss(sentence) {
+    const { re, map } = glossFor(settings.lang);
+    if (!re) return { text: sentence, n: 0 };
+    const seen = new Set();
+    let n = 0;
+    const text = sentence.replace(re, (m, term) => {
+      const key = norm(term);
+      const t = map.get(key);
+      if (!t || seen.has(key) || norm(m).includes(norm(t))) return m; // une seule explication, et rien si le mot la contient déjà
+      seen.add(key);
+      n++;
+      return `${m} (${t})`;
+    });
+    return { text, n };
+  }
+  // Message inédit écrit en anglais ? (pour le lire avec une voix anglaise)
+  const looksEnglish = (t) =>
+    (t.match(/\b(the|your|you|will|is|are|and|to|of|if|not|please|this)\b/gi) || []).length >= 2;
+
+  function translateUnseen(text) {
+    const parts = text.split(/(?<=[.!?])\s+/);
+    let unknown = 0;
+    let glossed = 0;
+    const out = parts.map((sentence) => {
+      const k = translateKnown(sentence);
+      if (k) return k.text;
+      unknown++;
+      const g = gloss(sentence);
+      glossed += g.n;
+      return g.text;
+    });
+    if (!unknown) return { text: out.join(" "), label: null }; // tout était connu
+    const security = SECURITY_HINT.test(text);
+    if (!security && !glossed && unknown === parts.length) return null; // rien pour aider
+    const label = uiText(security ? "U02" : "U01");
+    return label ? { text: `${label} ${out.join(" ")}`, label } : null;
   }
 
   function processAttributes(el) {
@@ -403,7 +484,12 @@
   const AUDIO = DICT.audio || {};
   const TTS = "speechSynthesis" in globalThis ? globalThis.speechSynthesis : null;
   let localVoices = [];
-  const loadVoices = () => (localVoices = TTS ? TTS.getVoices().filter((v) => v.localService) : []);
+  // Firefox marque à tort ses voix système (speech-dispatcher, SAPI…) comme non locales,
+  // mais il ne propose aucune voix en ligne : on les accepte toutes. Chrome et Edge, eux,
+  // ont des voix en ligne (« Google… », « … Online (Natural) ») qu'on exclut.
+  const IS_FIREFOX = /\bFirefox\//.test(navigator.userAgent);
+  const isLocalVoice = (v) => v.localService || IS_FIREFOX;
+  const loadVoices = () => (localVoices = TTS ? TTS.getVoices().filter(isLocalVoice) : []);
   if (TTS) {
     loadVoices();
     TTS.addEventListener("voiceschanged", loadVoices);
@@ -443,13 +529,13 @@
   function segmentsOf(el) {
     const segs = [];
     const files = AUDIO[settings.lang] || {};
-    const pushTTS = (text, translated) => {
+    const pushTTS = (text, translated, lang = null) => {
       // « 250 000 » -> « 250000 » pour que la voix lise le nombre entier
       const t = text.replace(/(\d)[\s  ](?=\d{3}\b)/g, "$1").trim();
       if (!/[\p{L}\d]/u.test(t)) return;
       const last = segs[segs.length - 1];
-      if (last && last.tts && last.translated === translated) last.tts += ", " + t;
-      else segs.push({ tts: t, translated });
+      if (last && last.tts && last.translated === translated && last.lang === lang) last.tts += ", " + t;
+      else segs.push({ tts: t, translated, lang });
     };
     const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
     let n;
@@ -457,7 +543,11 @@
       if (!n.nodeValue.trim() || n.parentElement.closest("script,style,noscript")) continue;
       const s = state.get(n);
       const mine = s && s.applied === n.nodeValue;
-      if (mine && s.id && files[s.id] && alive()) {
+      if (mine && s.label) {
+        // Texte inédit : la mention dans la langue choisie, puis l'original en français
+        pushTTS(s.label, true);
+        pushTTS(s.orig, false, looksEnglish(s.orig) ? "en" : "fr");
+      } else if (mine && s.id && files[s.id] && alive()) {
         segs.push({ audio: chrome.runtime.getURL(`audio/${settings.lang}/${files[s.id]}`) });
         pushTTS(s.rest, false); // valeur après « : », lue par la voix de synthèse
       } else pushTTS(n.nodeValue, !!mine);
@@ -510,7 +600,7 @@
       if (token !== playToken) return;
       if (seg.audio) await playAudio(seg.audio);
       else {
-        const v = seg.translated ? vTranslated : vValues;
+        const v = seg.translated ? vTranslated : (seg.lang && pickVoice(seg.lang)) || vValues;
         if (!v) {
           silent = true;
           continue;
@@ -521,7 +611,7 @@
     }
     if (token !== playToken) return;
     widget.hl.hidden = true;
-    if (silent) widgetStatus("Aucune voix locale : enregistrement nécessaire");
+    if (silent) widgetStatus(TTS ? "Aucune voix locale : enregistrement nécessaire" : "Pas de synthèse vocale dans ce navigateur : enregistrement nécessaire");
     else if (approx) widgetStatus("Voix approximative (pas encore d'enregistrement)");
     else widgetStatus("");
   }
