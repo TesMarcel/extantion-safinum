@@ -8,6 +8,7 @@ Extension de navigateur qui rend les services financiers numériques compréhens
 |---|---|
 | `PRESELECTION EPREUVE SAFINUM INNOVATE CHALLENGE Fr.pdf` | Énoncé officiel de l'épreuve de présélection |
 | `liste_mots_a_traduire.csv` | Tous les textes de l'environnement de test, en FR / EN / pidgin / fulfulde / ewondo, avec niveau de fiabilité |
+| `extension/` | Extension Chrome « Safinum Lingua » (Manifest V3) : dictionnaire généré depuis le CSV, protection des valeurs financières, traduction IA facultative des messages inédits |
 | `extantion/` | Captures d'écran des 5 étapes de l'environnement de test |
 | `logo safinum.png`, `logo safinum blanc.png` | Logos de l'événement |
 
@@ -70,3 +71,11 @@ Qualité linguistique vérifiée à part. Défauts majeurs : contresens sur une 
 Les traductions pidgin, fulfulde et ewondo de `liste_mots_a_traduire.csv` sont des **brouillons** (fiabilité H / M / B indiquée par ligne). Elles doivent être validées par des locuteurs natifs avant la démonstration, en priorité les alertes de sécurité (A02–A09) et le bouton « Confirmer le transfert » (R11).
 
 Langues prévues ensuite (une colonne à ajouter au CSV, remplie par un locuteur natif) : bamiléké, basaa, duala, bafia, kanuri, arabe choa, maka, bekwil, masa, toupouri, mafa.
+
+## Installer l'extension (Chrome)
+
+1. `chrome://extensions` → activer le **Mode développeur**.
+2. **Charger l'extension non empaquetée** → choisir le dossier `extension/`.
+3. Ouvrir https://safinum.cm/hackathon-test : le sélecteur 🌍 apparaît en bas à gauche.
+
+Après une modification du CSV : `python3 extension/tools/build_dictionary.py`, puis recharger l'extension. Chaque colonne de langue du CSV devient une langue de l'extension.
