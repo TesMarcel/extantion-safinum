@@ -82,6 +82,15 @@ Survoler un texte traduit fait apparaître un bouton 🔊 (ou **Alt+L** sur l'é
 
 Seules les voix **locales** de l'ordinateur sont utilisées : les voix « en ligne » de Chrome envoient le texte à un serveur, ce que les règles de l'épreuve interdisent. Rien n'est stocké.
 
+Windows et macOS ont des voix locales installées d'office. **Sous Linux**, il faut un moteur de voix et une option de Chrome, sinon seuls les enregistrements sont lus (message « Aucune voix locale ») :
+
+```bash
+sudo pacman -S espeak-ng speech-dispatcher        # Arch ; Debian/Ubuntu : sudo apt install espeak-ng speech-dispatcher
+echo "--enable-speech-dispatcher" > ~/.config/chrome-flags.conf   # ou lancer : google-chrome-stable --enable-speech-dispatcher
+```
+
+Puis fermer complètement Chrome et le relancer.
+
 Enregistrements actuels : fulfulde S02 (Sannu), F12 (Meere) ; ewondo F12 (Zezé) — crédits dans `extension/audio/CREDITS.md`. Pour en ajouter : fenêtre de l'extension → **🎙 Enregistrer les mots** (page pour locuteurs natifs, tout reste local), placer les fichiers `<id>.webm` dans `extension/audio/<langue>/`, relancer le générateur.
 
 ## Installer l'extension (Chrome)
