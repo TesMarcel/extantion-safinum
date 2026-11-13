@@ -1,5 +1,5 @@
 const LANGUAGES = globalThis.SAFINUM_DICT.languages;
-const DEFAULTS = { lang: LANGUAGES[0].code, sites: { "safinum.cm": true }, ai: false, tooltip: true };
+const DEFAULTS = { lang: LANGUAGES[0].code, sites: { "safinum.cm": true }, ai: false, tooltip: true, voice: true, rate: 0.9 };
 const $ = (id) => document.getElementById(id);
 
 (async () => {
@@ -20,8 +20,21 @@ const $ = (id) => document.getElementById(id);
   $("ai").checked = s.ai;
   $("key").value = apiKey;
   $("keybox").hidden = !s.ai;
+  $("voice").checked = s.voice;
+  $("voicebox").hidden = !s.voice;
+  $("rate").value = String(s.rate);
+  if (!$("rate").value) $("rate").value = "0.9";
+  showVoiceInfo($("lang").value);
 
-  $("lang").onchange = () => chrome.storage.sync.set({ lang: $("lang").value });
+  $("lang").onchange = () => {
+    chrome.storage.sync.set({ lang: $("lang").value });
+    showVoiceInfo($("lang").value);
+  };
+  $("voice").onchange = () => {
+    $("voicebox").hidden = !$("voice").checked;
+    chrome.storage.sync.set({ voice: $("voice").checked });
+  };
+  $("rate").onchange = () => chrome.storage.sync.set({ rate: Number($("rate").value) });
   $("tooltip").onchange = () => chrome.storage.sync.set({ tooltip: $("tooltip").checked });
   $("ai").onchange = () => {
     $("keybox").hidden = !$("ai").checked;
@@ -37,3 +50,19 @@ const $ = (id) => document.getElementById(id);
     chrome.storage.sync.set({ sites });
   };
 })();
+
+// Nombre d'enregistrements et voix locale de secours pour la langue choisie
+function showVoiceInfo(code) {
+  const lang = LANGUAGES.find((l) => l.code === code);
+  const n = Object.keys(globalThis.SAFINUM_DICT.audio?.[code] || {}).length;
+  const total = new Set(Object.values(globalThis.SAFINUM_DICT.entries).filter((e) => e[code]).map((e) => e.id)).size;
+  const render = () => {
+    const want = lang?.ttsLang || "fr";
+    const v = speechSynthesis.getVoices().find((x) => x.localService && x.lang.toLowerCase().startsWith(want));
+    $("voiceinfo").textContent =
+      `${n} / ${total} mots enregistrés en ${lang?.label}. ` +
+      (v ? `Les autres sont lus par la voix « ${v.name} » (approximative).` : "Aucune voix locale de secours sur cet ordinateur.");
+  };
+  render();
+  speechSynthesis.onvoiceschanged = render;
+}

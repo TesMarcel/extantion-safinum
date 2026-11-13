@@ -1,4 +1,4 @@
-// Safinum Lingua — traduit l'interface d'un service financier en fulfulde / beti-fang
+// Safinum Lingua — traduit l'interface d'un service financier en langues camerounaises
 // sans modifier son code. Principe : on ne touche qu'aux nœuds texte « libellés »,
 // jamais aux valeurs (montants, numéros, références, noms) ni aux champs de saisie.
 (() => {
@@ -10,7 +10,7 @@
   // Langues = colonnes du CSV (voir tools/build_dictionary.py)
   const LANGS = Object.fromEntries(DICT.languages.map((l) => [l.code, l]));
   const FIRST = DICT.languages[0]?.code;
-  const DEFAULTS = { lang: FIRST, sites: { "safinum.cm": true }, ai: false, tooltip: true };
+  const DEFAULTS = { lang: FIRST, sites: { "safinum.cm": true }, ai: false, tooltip: true, voice: true, rate: 0.9 };
 
   let settings = { ...DEFAULTS };
   let active = false;
@@ -40,42 +40,44 @@
   };
 
   // ---------- Recherche dans le dictionaire ----------
+  // Renvoie { text, id, rest } : id = ligne du CSV (pour l'enregistrement audio),
+  // rest = partie laissée intacte (ponctuation, valeur après « : »).
   function lookup(text) {
     const e = DICT.entries[norm(text)];
-    return e ? e[settings.lang] || null : null;
+    return e && e[settings.lang] ? { t: e[settings.lang], id: e.id } : null;
   }
 
   function translateKnown(text) {
     const direct = lookup(text);
-    if (direct) return direct;
+    if (direct) return { text: direct.t, id: direct.id, rest: "" };
     // Ponctuation finale absente du dictionnaire (« Frais : » …)
     const m = text.match(/^(.*?)(\s*[:.!?]\s*)$/s);
     if (m && m[1].trim()) {
-      const t = lookup(m[1]);
-      if (t) return t + m[2];
+      const r = lookup(m[1]);
+      if (r) return { text: r.t + m[2], id: r.id, rest: m[2] };
     }
     // Libellé composé : « Numéro de compte : CM 001… », « Bonjour, Amina »
     for (const sep of [" : ", ": ", ", "]) {
       const i = text.indexOf(sep);
       if (i > 0) {
-        const left = lookup(text.slice(0, i));
-        if (left) return left + text.slice(i); // la partie droite reste intacte
+        const r = lookup(text.slice(0, i));
+        if (r) return { text: r.t + text.slice(i), id: r.id, rest: text.slice(i) }; // la partie droite reste intacte
       }
     }
     return null;
   }
 
   // ---------- État des nœuds traduits ----------
-  // node -> { orig, applied }
+  // node -> { orig, applied, id, rest }
   const state = new WeakMap();
   const touched = new Set();
   const titled = new Set();
 
-  function setText(node, orig, translated) {
+  function setText(node, orig, translated, id = null, rest = "") {
     const lead = orig.match(/^\s*/)[0];
     const trail = orig.match(/\s*$/)[0];
     const applied = lead + translated.trim() + trail;
-    state.set(node, { orig, applied });
+    state.set(node, { orig, applied, id, rest });
     touched.add(node);
     if (node.nodeValue !== applied) node.nodeValue = applied;
     const parent = node.parentElement;
@@ -103,7 +105,7 @@
     if (!orig || !orig.trim() || isProtected(orig)) return;
 
     const known = translateKnown(orig);
-    if (known) return setText(node, orig, known);
+    if (known) return setText(node, orig, known.text, known.id, known.rest);
 
     // Texte inconnu : nom propre -> jamais traduit
     if (PROPER_NAME.test(orig.trim())) return;
@@ -116,7 +118,7 @@
       const key = `slOrig_${attr.replace("-", "_")}`;
       const current = el.getAttribute(attr);
       const orig = el.dataset[key] && el.dataset[`${key}_applied`] === current ? el.dataset[key] : current;
-      const t = translateKnown(orig);
+      const t = translateKnown(orig)?.text;
       if (t) {
         el.dataset[key] = orig;
         el.dataset[`${key}_applied`] = t;
@@ -318,7 +320,16 @@
         select:focus-visible { outline: 3px solid #00BFFF; outline-offset: 2px; }
         .st { font-weight: 400; font-size: 12px; color: #FFEB3B; }
         .st:empty { display: none; }
+        .spk { position: fixed; z-index: 2147483647; width: 32px; height: 32px; padding: 0;
+          border: 2px solid #FFEB3B; border-radius: 50%; background: #111827; color: #fff;
+          font-size: 16px; line-height: 1; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+        .spk:focus-visible { outline: 3px solid #00BFFF; outline-offset: 2px; }
+        .spk[hidden], .hl[hidden] { display: none; }
+        .hl { position: fixed; z-index: 2147483645; pointer-events: none;
+          border: 3px solid #FFEB3B; border-radius: 6px; background: rgba(255,235,59,.18); }
       </style>
+      <div class="hl" hidden></div>
+      <button class="spk" type="button" hidden aria-label="Écouter ce texte (Alt+L)" title="Écouter (Alt+L)">🔊</button>
       <div class="box" role="region" aria-label="Langue de l'interface">
         <span aria-hidden="true">🌍</span>
         <select aria-label="Choisir la langue"></select>
@@ -338,8 +349,12 @@
         chrome.storage.sync.set({ sites });
       } else chrome.storage.sync.set({ lang: v, sites: { ...sites, [h]: true } });
     });
+    const spk = root.querySelector(".spk");
+    spk.addEventListener("click", () => readElement(voiceTarget));
+    spk.addEventListener("mouseenter", () => clearTimeout(hideTimer));
+    spk.addEventListener("mouseleave", scheduleHide);
     document.documentElement.appendChild(host);
-    widget = { select, status: root.querySelector(".st") };
+    widget = { host, select, status: root.querySelector(".st"), spk, hl: root.querySelector(".hl") };
   }
   function widgetStatus(msg) {
     if (widget) widget.status.textContent = msg;
@@ -348,6 +363,187 @@
     if (!widget) buildWidget();
     widget.select.value = siteEnabled() ? settings.lang : "off";
   }
+
+  // ---------- Lecture vocale ----------
+  // 1) enregistrement d'un locuteur natif (extension/audio/<langue>/<id>.*) s'il existe ;
+  // 2) sinon voix de synthèse de la langue la plus proche, marquée « approximative ».
+  // Seules les voix LOCALES sont utilisées : les voix « en ligne » de Chrome envoient
+  // le texte à un serveur, ce que la règle de l'épreuve interdit. Rien n'est stocké.
+  const AUDIO = DICT.audio || {};
+  const TTS = "speechSynthesis" in globalThis ? globalThis.speechSynthesis : null;
+  let localVoices = [];
+  const loadVoices = () => (localVoices = TTS ? TTS.getVoices().filter((v) => v.localService) : []);
+  if (TTS) {
+    loadVoices();
+    TTS.addEventListener("voiceschanged", loadVoices);
+  }
+  const pickVoice = (want) =>
+    localVoices.find((v) => v.lang.toLowerCase().replace("_", "-").startsWith(want)) || null;
+
+  const READABLE = "button,a,label,li,tr,p,h1,h2,h3,h4,h5,h6,[role=alert],[role=status],[role=button]";
+  let voiceTarget = null;
+  let hideTimer = null;
+  let playToken = 0;
+  let currentAudio = null;
+
+  const hasTranslatedText = (el) =>
+    [...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && state.get(n)?.applied === n.nodeValue);
+
+  // Élément « lisible » sous le pointeur ou le focus : il doit contenir un texte traduit.
+  function readableFrom(start) {
+    let el = start?.nodeType === Node.ELEMENT_NODE ? start : start?.parentElement;
+    for (let i = 0; el && i < 4; i++, el = el.parentElement) {
+      if (el === widget?.host || el === document.body) return null;
+      if (hasTranslatedText(el)) {
+        const block = el.closest(READABLE);
+        return block && block !== document.body && block.textContent.length < 300 ? block : el;
+      }
+    }
+    return null;
+  }
+
+  // Découpe le texte de l'élément en morceaux : enregistrement audio ou synthèse.
+  function segmentsOf(el) {
+    const segs = [];
+    const files = AUDIO[settings.lang] || {};
+    const pushTTS = (text, translated) => {
+      // « 250 000 » -> « 250000 » pour que la voix lise le nombre entier
+      const t = text.replace(/(\d)[\s  ](?=\d{3}\b)/g, "$1").trim();
+      if (!/[\p{L}\d]/u.test(t)) return;
+      const last = segs[segs.length - 1];
+      if (last && last.tts && last.translated === translated) last.tts += ", " + t;
+      else segs.push({ tts: t, translated });
+    };
+    const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let n;
+    while ((n = tw.nextNode())) {
+      if (!n.nodeValue.trim() || n.parentElement.closest("script,style,noscript")) continue;
+      const s = state.get(n);
+      const mine = s && s.applied === n.nodeValue;
+      if (mine && s.id && files[s.id]) {
+        segs.push({ audio: chrome.runtime.getURL(`audio/${settings.lang}/${files[s.id]}`) });
+        pushTTS(s.rest, false); // valeur après « : », lue par la voix de synthèse
+      } else pushTTS(n.nodeValue, !!mine);
+    }
+    return segs;
+  }
+
+  function stopSpeaking() {
+    playToken++;
+    if (TTS) TTS.cancel();
+    if (currentAudio) currentAudio.pause();
+    currentAudio = null;
+    if (widget) widget.hl.hidden = true;
+  }
+
+  const playAudio = (url) =>
+    new Promise((resolve) => {
+      const a = new Audio(url);
+      currentAudio = a;
+      a.onended = a.onerror = () => resolve();
+      a.play().catch(resolve);
+    });
+
+  const say = (text, voice) =>
+    new Promise((resolve) => {
+      const u = new SpeechSynthesisUtterance(text);
+      u.voice = voice;
+      u.lang = voice.lang;
+      u.rate = settings.rate;
+      u.onend = u.onerror = () => resolve();
+      TTS.speak(u);
+    });
+
+  async function readElement(el) {
+    if (!el || !el.isConnected) return;
+    stopSpeaking();
+    const token = playToken;
+    const segs = segmentsOf(el);
+    if (!segs.length) return;
+    const lang = LANGS[settings.lang];
+    // Mots traduits sans enregistrement : voix la plus proche. Valeurs (montants…) : voix française.
+    const vTranslated = pickVoice(lang.ttsLang || "fr") || pickVoice("fr") || pickVoice("en");
+    const vValues = pickVoice("fr") || vTranslated;
+    const r = el.getBoundingClientRect();
+    Object.assign(widget.hl.style, { left: r.left - 4 + "px", top: r.top - 4 + "px", width: r.width + 8 + "px", height: r.height + 8 + "px" });
+    widget.hl.hidden = false;
+    let approx = false;
+    let silent = false;
+    for (const seg of segs) {
+      if (token !== playToken) return;
+      if (seg.audio) await playAudio(seg.audio);
+      else {
+        const v = seg.translated ? vTranslated : vValues;
+        if (!v) {
+          silent = true;
+          continue;
+        }
+        if (seg.translated) approx = true;
+        await say(seg.tts, v);
+      }
+    }
+    if (token !== playToken) return;
+    widget.hl.hidden = true;
+    if (silent) widgetStatus("Aucune voix locale : enregistrement nécessaire");
+    else if (approx) widgetStatus("Voix approximative (pas encore d'enregistrement)");
+    else widgetStatus("");
+  }
+
+  function showSpeaker(el) {
+    clearTimeout(hideTimer);
+    voiceTarget = el;
+    const r = el.getBoundingClientRect();
+    const left = Math.min(r.right + 6, innerWidth - 38);
+    const top = Math.max(4, Math.min(r.top + r.height / 2 - 16, innerHeight - 38));
+    Object.assign(widget.spk.style, { left: left + "px", top: top + "px" });
+    widget.spk.hidden = false;
+  }
+
+  function scheduleHide() {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      if (widget) widget.spk.hidden = true;
+      voiceTarget = null;
+    }, 1500);
+  }
+
+  const voiceOn = () => active && settings.voice && widget;
+
+  document.addEventListener(
+    "mouseover",
+    (e) => {
+      if (!voiceOn() || e.target === widget.host) return;
+      const el = readableFrom(e.target);
+      if (el) showSpeaker(el);
+      else if (voiceTarget && !voiceTarget.contains(e.target)) scheduleHide();
+    },
+    { passive: true, capture: true }
+  );
+  document.addEventListener(
+    "focusin",
+    (e) => {
+      if (!voiceOn() || e.target === widget.host) return;
+      const el = readableFrom(e.target);
+      if (el) showSpeaker(el);
+    },
+    { capture: true }
+  );
+  // Alt+L : lire l'élément qui a le focus (ou celui sous le pointeur). Échap : arrêter.
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (!voiceOn()) return;
+      if (e.altKey && !e.ctrlKey && !e.metaKey && e.code === "KeyL") {
+        const el = readableFrom(document.activeElement) || voiceTarget;
+        if (el) {
+          e.preventDefault();
+          readElement(el);
+        }
+      } else if (e.key === "Escape" && (TTS?.speaking || currentAudio)) stopSpeaking();
+    },
+    { capture: true }
+  );
+  addEventListener("scroll", () => widget && !widget.spk.hidden && scheduleHide(), { passive: true, capture: true });
 
   // ---------- Réglages ----------
   function siteEnabled() {
@@ -365,6 +561,10 @@
       start();
     } else stop();
     syncWidget();
+    if (!active || !settings.voice) {
+      stopSpeaking();
+      if (widget) widget.spk.hidden = true;
+    }
   }
 
   chrome.storage.sync.get(DEFAULTS, (s) => {

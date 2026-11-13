@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Safinum Lingua",
-  "version": "0.1.0",
-  "description": "Rend les services financiers numériques compréhensibles en fulfulde et en beti-fang, sans modifier le site.",
+  "version": "0.2.0",
+  "description": "Rend les services financiers numériques compréhensibles et audibles en langues camerounaises, sans modifier le site.",
   "permissions": ["storage"],
   "host_permissions": ["https://api.anthropic.com/*"],
   "background": { "service_worker": "background.js" },
@@ -13,5 +13,8 @@
       "js": ["dictionary.js", "content.js"],
       "run_at": "document_idle"
     }
+  ],
+  "web_accessible_resources": [
+    { "resources": ["audio/*"], "matches": ["<all_urls>"] }
   ]
 }

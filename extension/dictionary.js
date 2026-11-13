@@ -5,19 +5,22 @@ globalThis.SAFINUM_DICT = {
    "code": "pidgin",
    "label": "Pidgin",
    "htmlLang": "wes",
-   "description": "pidgin camerounais (Kamtok)"
+   "description": "pidgin camerounais (Kamtok)",
+   "ttsLang": "en"
   },
   {
    "code": "fulfulde",
    "label": "Fulfulde",
    "htmlLang": "ff",
-   "description": "fulfulde (variante de l'Adamaoua, Cameroun)"
+   "description": "fulfulde (variante de l'Adamaoua, Cameroun)",
+   "ttsLang": "fr"
   },
   {
    "code": "ewondo",
    "label": "Ewondo",
    "htmlLang": "ewo",
-   "description": "ewondo (beti, région de Yaoundé, Cameroun)"
+   "description": "ewondo (beti, région de Yaoundé, Cameroun)",
+   "ttsLang": "fr"
   }
  ],
  "entries": {
@@ -1122,5 +1125,14 @@ globalThis.SAFINUM_DICT = {
    "fulfulde": "soodoowo / soodooɓe",
    "ewondo": "kliyan"
   }
- ]
+ ],
+ "audio": {
+  "fulfulde": {
+   "F12": "F12.wav",
+   "S02": "S02.wav"
+  },
+  "ewondo": {
+   "F12": "F12.wav"
+  }
+ }
 };

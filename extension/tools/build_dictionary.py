@@ -16,14 +16,20 @@ ROOT = Path(__file__).resolve().parents[2]
 CSV_PATH = ROOT / "liste_mots_a_traduire.csv"
 OUT_PATH = ROOT / "extension" / "dictionary.js"
 
-# Libellé affiché, code de langue HTML et description pour la traduction IA.
+AUDIO_DIR = ROOT / "extension" / "audio"
+ITEMS_PATH = ROOT / "extension" / "recorder_items.js"
+AUDIO_EXT = {".mp3", ".ogg", ".webm", ".wav", ".m4a"}
+
+# Libellé affiché, code de langue HTML, description pour la traduction IA et
+# langue de la voix de synthèse de secours (aucune voix n'existe pour ces langues :
+# on prend la plus proche, en attendant les enregistrements de locuteurs natifs).
 # Une langue absente d'ici fonctionne quand même (libellé = nom de colonne).
 KNOWN = {
-    "pidgin": ("Pidgin", "wes", "pidgin camerounais (Kamtok)"),
-    "fulfulde": ("Fulfulde", "ff", "fulfulde (variante de l'Adamaoua, Cameroun)"),
-    "ewondo": ("Ewondo", "ewo", "ewondo (beti, région de Yaoundé, Cameroun)"),
-    "duala": ("Duala", "dua", "duala (Douala, Cameroun)"),
-    "basaa": ("Basaa", "bas", "basaa (Cameroun)"),
+    "pidgin": ("Pidgin", "wes", "pidgin camerounais (Kamtok)", "en"),
+    "fulfulde": ("Fulfulde", "ff", "fulfulde (variante de l'Adamaoua, Cameroun)", "fr"),
+    "ewondo": ("Ewondo", "ewo", "ewondo (beti, région de Yaoundé, Cameroun)", "fr"),
+    "duala": ("Duala", "dua", "duala (Douala, Cameroun)", "fr"),
+    "basaa": ("Basaa", "bas", "basaa (Cameroun)", "fr"),
 }
 EMPTY = {"", "A VALIDER", "NE PAS TRADUIRE"}
 
@@ -46,11 +52,12 @@ def main() -> int:
     lang_cols = [c for c in header[start:end] if not c.startswith("fiabilite_")]
     languages = []
     for c in lang_cols:
-        label, html, desc = KNOWN.get(c, (c.replace("_", " ").title(), "", c.replace("_", " ")))
-        languages.append({"code": c, "label": label, "htmlLang": html, "description": desc})
+        label, html, desc, tts = KNOWN.get(c, (c.replace("_", " ").title(), "", c.replace("_", " "), "fr"))
+        languages.append({"code": c, "label": label, "htmlLang": html, "description": desc, "ttsLang": tts})
 
     entries: dict[str, dict] = {}
     glossary: list[dict] = []
+    items: list[dict] = []  # pour l'outil d'enregistrement
     conflicts = 0
     for r in rows[1:]:
         rid = r[col["id"]]
@@ -60,6 +67,7 @@ def main() -> int:
         if rid.startswith("V"):
             glossary.append({"fr": r[col["francais"]], "en": r[col["anglais"]], **tr})
             continue
+        items.append({"id": rid, "fr": r[col["francais"]], **tr})
         value = {"id": rid, **tr}
         for src in (r[col["francais"]], r[col["anglais"]]):
             key = norm(src)
@@ -70,7 +78,16 @@ def main() -> int:
                 continue
             entries.setdefault(key, value)
 
-    payload = {"languages": languages, "entries": entries, "glossary": glossary}
+    # Enregistrements : extension/audio/<langue>/<id>.<ext>
+    audio: dict[str, dict] = {}
+    for c in lang_cols:
+        d = AUDIO_DIR / c
+        if d.is_dir():
+            files = {f.stem: f.name for f in sorted(d.iterdir()) if f.suffix.lower() in AUDIO_EXT}
+            if files:
+                audio[c] = files
+
+    payload = {"languages": languages, "entries": entries, "glossary": glossary, "audio": audio}
     OUT_PATH.write_text(
         "// Fichier généré par tools/build_dictionary.py — ne pas modifier à la main.\n"
         "globalThis.SAFINUM_DICT = "
@@ -78,8 +95,15 @@ def main() -> int:
         + ";\n",
         encoding="utf-8",
     )
+    ITEMS_PATH.write_text(
+        "// Fichier généré par tools/build_dictionary.py — ne pas modifier à la main.\n"
+        "globalThis.SAFINUM_ITEMS = " + json.dumps(items, ensure_ascii=False, indent=1) + ";\n",
+        encoding="utf-8",
+    )
     names = ", ".join(l["label"] for l in languages)
     print(f"Langues : {names} — {len(entries)} entrées, {len(glossary)} termes de glossaire")
+    for l in languages:
+        print(f"  {l['label']} : {len(audio.get(l['code'], {}))} enregistrement(s)")
     return 1 if conflicts else 0
 
 
