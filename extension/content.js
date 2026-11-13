@@ -15,6 +15,36 @@
   let settings = { ...DEFAULTS };
   let active = false;
 
+  // Après un rechargement de l'extension, ce script reste dans les pages déjà ouvertes
+  // mais n'a plus accès à chrome.* (« Extension context invalidated »).
+  // On le détecte au lieu de planter : la traduction affichée reste, le reste est désactivé.
+  let orphan = false;
+  const alive = () => {
+    try {
+      return !orphan && !!chrome.runtime?.id;
+    } catch {
+      return false;
+    }
+  };
+  function becomeOrphan() {
+    if (orphan) return;
+    orphan = true;
+    stopSpeaking();
+    if (widget) {
+      widget.spk.hidden = true;
+      widget.select.disabled = true;
+      widgetStatus("Extension mise à jour : rechargez la page (F5)");
+    }
+  }
+  function saveSettings(values) {
+    if (!alive()) return becomeOrphan();
+    try {
+      chrome.storage.sync.set(values);
+    } catch {
+      becomeOrphan();
+    }
+  }
+
   // ---------- Normalisation (doit rester identique à tools/build_dictionary.py) ----------
   const norm = (s) =>
     s.normalize("NFC").replace(/[’‘]/g, "'").replace(/[\s  ]+/g, " ").trim().toLowerCase();
@@ -275,6 +305,7 @@
     const glossary = DICT.glossary.filter((g) => g[lang]).map((g) => `${g.fr} / ${g.en} = ${g[lang]}`);
     widgetStatus("Traduction IA…");
     let res;
+    if (!alive()) return becomeOrphan();
     try {
       res = await chrome.runtime.sendMessage({
         type: "sl-translate",
@@ -346,8 +377,8 @@
       if (v === "off") {
         for (const d of Object.keys(sites)) if (h === d || h.endsWith("." + d)) sites[d] = false;
         sites[h] = false;
-        chrome.storage.sync.set({ sites });
-      } else chrome.storage.sync.set({ lang: v, sites: { ...sites, [h]: true } });
+        saveSettings({ sites });
+      } else saveSettings({ lang: v, sites: { ...sites, [h]: true } });
     });
     const spk = root.querySelector(".spk");
     spk.addEventListener("click", () => readElement(voiceTarget));
@@ -420,7 +451,7 @@
       if (!n.nodeValue.trim() || n.parentElement.closest("script,style,noscript")) continue;
       const s = state.get(n);
       const mine = s && s.applied === n.nodeValue;
-      if (mine && s.id && files[s.id]) {
+      if (mine && s.id && files[s.id] && alive()) {
         segs.push({ audio: chrome.runtime.getURL(`audio/${settings.lang}/${files[s.id]}`) });
         pushTTS(s.rest, false); // valeur après « : », lue par la voix de synthèse
       } else pushTTS(n.nodeValue, !!mine);
@@ -507,7 +538,12 @@
     }, 1500);
   }
 
-  const voiceOn = () => active && settings.voice && widget;
+  const voiceOn = () => {
+    if (!active || !settings.voice || !widget) return false;
+    if (alive()) return true;
+    becomeOrphan();
+    return false;
+  };
 
   document.addEventListener(
     "mouseover",
