@@ -86,7 +86,9 @@ Windows et macOS ont des voix locales installées d'office. **Sous Linux**, il f
 
 ```bash
 sudo pacman -S espeak-ng speech-dispatcher        # Arch ; Debian/Ubuntu : sudo apt install espeak-ng speech-dispatcher
-echo "--enable-speech-dispatcher" > ~/.config/chrome-flags.conf   # ou lancer : google-chrome-stable --enable-speech-dispatcher
+google-chrome-stable --enable-speech-dispatcher   # option à passer au lancement de Chrome
+# Arch (paquet google-chrome) : la rendre permanente avec
+echo "--enable-speech-dispatcher" > ~/.config/chrome-flags.conf
 ```
 
 Puis fermer complètement Chrome et le relancer.
