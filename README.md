@@ -82,7 +82,15 @@ Survoler un texte traduit fait apparaître un bouton 🔊 (ou **Alt+L** sur l'é
 
 Seules les voix **locales** de l'ordinateur sont utilisées : les voix « en ligne » de Chrome envoient le texte à un serveur, ce que les règles de l'épreuve interdisent. Rien n'est stocké.
 
-Windows et macOS ont des voix locales installées d'office. **Sous Linux**, il faut un moteur de voix et une option de Chrome, sinon seuls les enregistrements sont lus (message « Aucune voix locale ») :
+**Sous Windows**, rien à installer en général : Chrome utilise les voix de Windows (par exemple « Microsoft Hortense » en français, « Microsoft Hazel » ou « Microsoft Zira » en anglais). Si le message « Aucune voix locale » s'affiche, ou si une langue manque (Windows installé en anglais sans voix française, par exemple) :
+
+1. **Paramètres** → **Heure et langue** → **Voix** (Windows 11 : **Gérer les voix** → **Ajouter des voix**).
+2. Ajouter **Français (France)**, et **English (United Kingdom)** pour le pidgin (sinon une autre voix anglaise est utilisée).
+3. Fermer complètement Chrome et le relancer.
+
+**Sous macOS**, les voix (Thomas, Daniel…) sont installées d'office ; d'autres s'ajoutent dans **Réglages Système** → **Accessibilité** → **Contenu énoncé** → **Voix du système**.
+
+**Sous Linux**, il faut un moteur de voix et une option de Chrome, sinon seuls les enregistrements sont lus (message « Aucune voix locale ») :
 
 ```bash
 sudo pacman -S espeak-ng speech-dispatcher        # Arch ; Debian/Ubuntu : sudo apt install espeak-ng speech-dispatcher
