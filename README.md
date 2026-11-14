@@ -2,6 +2,15 @@
 
 Extension de navigateur qui rend les services financiers numériques compréhensibles dans les langues nationales du Cameroun (**pidgin**, **fulfulde** et **ewondo**), sans modifier le code source du service ciblé.
 
+## Livrables de la présélection
+
+| Fichier | Contenu |
+|---|---|
+| [`A_ENVOYER/Safinum_Lingua_Documentation.pdf`](A_ENVOYER/Safinum_Lingua_Documentation.pdf) | Toute la documentation (installation, description, note technique, méthode de validation linguistique) |
+| [`A_ENVOYER/Safinum_Lingua_Extension_v0.3.0.zip`](A_ENVOYER/Safinum_Lingua_Extension_v0.3.0.zip) | L'extension, prête à installer |
+| [`A_ENVOYER/Safinum_Lingua_Video_demo.mp4`](A_ENVOYER/Safinum_Lingua_Video_demo.mp4) | Vidéo de démonstration (2 min 46 s) |
+| [`DOSSIER_LIVRABLE_SAFINUM/`](DOSSIER_LIVRABLE_SAFINUM/) ([zip](DOSSIER_LIVRABLE_SAFINUM.zip)) | Dossier complet, rangé par livrable demandé |
+
 ## Contenu du dépôt
 
 | Fichier / dossier | Description |
